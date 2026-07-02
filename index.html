@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Number Notes</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+  html,body { height:100%; overflow:hidden; }
+  body {
+    font-family: "Arial Rounded MT Bold", "Nunito", "Comic Sans MS", -apple-system, system-ui, sans-serif;
+    background: linear-gradient(180deg,#4FC3F7 0%, #81D4FA 40%, #B3E5FC 100%);
+    display:flex; flex-direction:column; align-items:center;
+    position:fixed; inset:0;
+  }
+  .screen { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; padding:12px; overflow:hidden; }
+  .screen.active { display:flex; }
+
+  /* ---------- decorative clouds ---------- */
+  .cloud { position:absolute; font-size:56px; opacity:.8; animation:drift 30s linear infinite; pointer-events:none; z-index:0; }
+  @keyframes drift { from{transform:translateX(-120px)} to{transform:translateX(110vw)} }
+
+  /* ---------- HOME ---------- */
+  #home h1 {
+    font-size: clamp(40px, 11vw, 64px); color:#fff; margin-top:8px; z-index:1;
+    text-shadow: 0 4px 0 #F57C00, 0 8px 12px rgba(0,0,0,.2);
+    letter-spacing:1px; text-align:center;
+    animation: titleBounce 2.2s ease-in-out infinite;
+  }
+  @keyframes titleBounce { 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.05) rotate(2deg)} }
+  .level-cards { display:flex; flex-direction:column; gap:16px; width:100%; max-width:420px; z-index:1; margin-top:10px; flex:1; justify-content:center; }
+  .level-card {
+    border:none; border-radius:28px; padding:18px 20px; font-family:inherit;
+    display:flex; align-items:center; gap:16px; cursor:pointer;
+    box-shadow: 0 8px 0 rgba(0,0,0,.18), inset 0 -6px 0 rgba(0,0,0,.12), inset 0 4px 0 rgba(255,255,255,.35);
+    transition: transform .12s;
+    color:#fff; text-align:left;
+  }
+  .level-card:active { transform:scale(.95); }
+  .level-card .big-emoji { font-size:52px; filter:drop-shadow(0 3px 2px rgba(0,0,0,.2)); }
+  .level-card .lv-name { font-size:26px; font-weight:bold; text-shadow:0 2px 0 rgba(0,0,0,.2); }
+  .level-card .lv-dots { font-size:20px; letter-spacing:3px; margin-top:4px; }
+  .level-card.locked { background:#9E9E9E !important; filter:saturate(.4); }
+  .level-card.shake { animation: shake .4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+  .home-bottom { display:flex; gap:14px; z-index:1; margin-bottom:10px; }
+
+  /* ---------- shared chunky buttons ---------- */
+  .chunky {
+    border:none; border-radius:22px; font-family:inherit; font-weight:bold; cursor:pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,.2), inset 0 -5px 0 rgba(0,0,0,.12), inset 0 3px 0 rgba(255,255,255,.4);
+    transition: transform .1s; color:#fff;
+  }
+  .chunky:active { transform:translateY(4px) scale(.97); box-shadow:0 2px 0 rgba(0,0,0,.2), inset 0 -3px 0 rgba(0,0,0,.12); }
+  .pill { font-size:22px; padding:14px 22px; display:flex; align-items:center; gap:8px; }
+
+  /* ---------- PLAY SCREEN ---------- */
+  #play { justify-content:space-between; }
+  .top-bar { width:100%; max-width:460px; display:flex; justify-content:space-between; align-items:center; z-index:2; }
+  .icon-btn { width:58px; height:58px; font-size:28px; border-radius:18px; display:flex; align-items:center; justify-content:center; }
+  .star-total { background:#fff; border-radius:20px; padding:8px 18px; font-size:24px; font-weight:bold; color:#F57C00; box-shadow:0 4px 0 rgba(0,0,0,.12); display:flex; align-items:center; gap:6px; }
+
+  .mascot-zone { display:flex; flex-direction:column; align-items:center; z-index:1; position:relative; }
+  .bubble {
+    background:#fff; border-radius:24px; padding:10px 22px; font-size:clamp(22px,6vw,30px); font-weight:bold; color:#5E35B1;
+    box-shadow:0 5px 0 rgba(0,0,0,.12); margin-bottom:6px; min-height:30px;
+    position:relative; transition:transform .2s; text-align:center;
+  }
+  .bubble::after { content:""; position:absolute; bottom:-12px; left:50%; transform:translateX(-50%);
+    border:12px solid transparent; border-top-color:#fff; border-bottom:none; }
+  .bubble.pop { animation:bubblePop .35s; }
+  @keyframes bubblePop { 0%{transform:scale(.5)} 70%{transform:scale(1.12)} 100%{transform:scale(1)} }
+
+  #mascot-wrap { width:130px; height:140px; }
+  #mascot-wrap svg { width:100%; height:100%; overflow:visible; }
+  .m-hat,.m-shades,.m-crown { display:none; }
+  .outfit-hat .m-hat { display:block; } .outfit-shades .m-shades { display:block; } .outfit-crown .m-crown { display:block; }
+  .mood-happy #mascot-body { animation: mBounce 1.6s ease-in-out infinite; transform-origin:60px 110px; }
+  .mood-cheer #mascot-body { animation: mCheer .5s ease-in-out 4; transform-origin:60px 110px; }
+  .mood-dance #mascot-body { animation: mDance .4s ease-in-out 6; transform-origin:60px 110px; }
+  .mood-sad #mascot-body { animation: mSad 1s ease-in-out 1; transform-origin:60px 110px; }
+  @keyframes mBounce { 0%,100%{transform:translateY(0) scale(1,1)} 50%{transform:translateY(-8px) scale(.98,1.03)} }
+  @keyframes mCheer { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-26px) rotate(6deg)} }
+  @keyframes mDance { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg) translateY(-8px)} }
+  @keyframes mSad { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px) scale(1.03,.95)} }
+
+  /* ---------- number pads ---------- */
+  #pads { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; max-width:440px; z-index:1; padding:6px; }
+  .pad {
+    width:min(21vw,88px); height:min(21vw,88px); border:none; border-radius:26px; cursor:pointer;
+    font-family:inherit; font-size:min(11vw,46px); font-weight:bold; color:#fff;
+    text-shadow:0 3px 0 rgba(0,0,0,.25);
+    box-shadow:0 8px 0 var(--dark), inset 0 -6px 0 rgba(0,0,0,.15), inset 0 5px 0 rgba(255,255,255,.4);
+    background:var(--col);
+    transition:transform .08s, filter .08s;
+  }
+  .pad:active { transform:translateY(5px); box-shadow:0 3px 0 var(--dark), inset 0 -3px 0 rgba(0,0,0,.15); }
+  .pad.lit { filter:brightness(1.35) saturate(1.2); transform:scale(1.14); box-shadow:0 0 26px #fff, 0 8px 0 var(--dark); }
+  .pad.wrong { animation:wobble .5s; }
+  @keyframes wobble { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-9deg)} 50%{transform:rotate(9deg)} 75%{transform:rotate(-6deg)} }
+  .pad.disabled { pointer-events:none; }
+
+  /* ---------- bottom HUD ---------- */
+  .hud { width:100%; max-width:460px; display:flex; align-items:flex-end; justify-content:space-between; gap:10px; z-index:1; padding-bottom:6px; }
+  .jar {
+    width:74px; height:88px; background:rgba(255,255,255,.55); border:5px solid #fff; border-radius:14px 14px 22px 22px;
+    position:relative; display:flex; flex-wrap:wrap-reverse; align-content:flex-start; justify-content:center; padding:4px; overflow:hidden;
+    box-shadow:0 5px 0 rgba(0,0,0,.12);
+  }
+  .jar::before { content:""; position:absolute; top:-12px; left:14px; right:14px; height:10px; background:#FF7043; border-radius:6px; box-shadow:0 2px 0 rgba(0,0,0,.15); }
+  .jar .js { font-size:15px; line-height:16px; }
+  .jar-label { text-align:center; font-size:20px; font-weight:bold; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.2); }
+  .hud-mid { flex:1; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .streak-row { display:flex; gap:8px; align-items:center; font-size:26px; }
+  .streak-slot { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.45); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:inset 0 2px 4px rgba(0,0,0,.15); }
+  .streak-slot.on { background:#FFF176; box-shadow:0 0 12px #FFEE58; animation:popIn .3s; }
+  @keyframes popIn { from{transform:scale(0)} to{transform:scale(1)} }
+  .progress-outer { width:100%; height:26px; background:rgba(255,255,255,.5); border-radius:14px; overflow:hidden; box-shadow:inset 0 3px 5px rgba(0,0,0,.15); position:relative; }
+  .progress-inner { height:100%; width:0%; background:linear-gradient(90deg,#AB47BC,#EC407A); border-radius:14px; transition:width .6s cubic-bezier(.34,1.56,.64,1); }
+  .progress-gift { position:absolute; right:4px; top:0; font-size:19px; line-height:26px; }
+
+  /* ---------- overlays ---------- */
+  .overlay {
+    position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(94,53,177,.92); z-index:50; text-align:center; padding:20px;
+  }
+  .overlay.active { display:flex; animation:fadeIn .3s; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .overlay h2 { color:#FFEB3B; font-size:clamp(40px,12vw,64px); text-shadow:0 5px 0 #E65100; animation:titleBounce 1s ease-in-out infinite; margin-bottom:10px; }
+  .overlay .reveal-emoji { font-size:110px; animation:revealSpin .8s cubic-bezier(.34,1.56,.64,1); filter:drop-shadow(0 6px 8px rgba(0,0,0,.35)); }
+  @keyframes revealSpin { 0%{transform:scale(0) rotate(-360deg)} 100%{transform:scale(1) rotate(0)} }
+  .overlay .reveal-name { color:#fff; font-size:30px; font-weight:bold; margin:12px 0 26px; text-shadow:0 3px 0 rgba(0,0,0,.3); }
+  .overlay-btns { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+
+  /* ---------- sticker book ---------- */
+  #book h2 { color:#fff; font-size:40px; text-shadow:0 4px 0 #7B1FA2; margin:8px 0 16px; z-index:1; }
+  .sticker-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%; max-width:420px; z-index:1; overflow-y:auto; flex:1; padding:6px; }
+  .sticker-cell {
+    background:rgba(255,255,255,.9); border:none; border-radius:22px; aspect-ratio:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-size:48px; box-shadow:0 5px 0 rgba(0,0,0,.15); cursor:pointer; font-family:inherit;
+  }
+  .sticker-cell .s-name { font-size:14px; font-weight:bold; color:#5E35B1; margin-top:2px; }
+  .sticker-cell.mystery { background:rgba(255,255,255,.35); color:rgba(255,255,255,.9); }
+  .sticker-cell.chosen { outline:5px solid #FFEB3B; }
+
+  /* ---------- confetti & fx ---------- */
+  #fx { position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:99; }
+  .conf { position:absolute; width:14px; height:14px; top:-20px; animation:confFall linear forwards; }
+  @keyframes confFall { to { transform:translateY(110vh) rotate(720deg); } }
+  .fly-star { position:absolute; font-size:40px; z-index:98; pointer-events:none; }
+  .callout {
+    position:absolute; left:50%; top:38%; transform:translate(-50%,-50%);
+    font-size:clamp(44px,13vw,72px); font-weight:bold; color:#FFEB3B; z-index:97; pointer-events:none;
+    text-shadow:0 4px 0 #E65100, 0 8px 14px rgba(0,0,0,.3);
+    animation:calloutPop 1.4s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes calloutPop { 0%{transform:translate(-50%,-50%) scale(0) rotate(-15deg); opacity:1} 30%{transform:translate(-50%,-50%) scale(1.2) rotate(5deg)} 70%{transform:translate(-50%,-50%) scale(1); opacity:1} 100%{transform:translate(-50%,-60%) scale(1.1); opacity:0} }
+</style>
+</head>
+<body>
+<div id="fx"></div>
+
+<!-- ============ HOME ============ -->
+<div class="screen active" id="home">
+  <div class="cloud" style="top:6%; animation-duration:38s;">☁️</div>
+  <div class="cloud" style="top:22%; animation-duration:26s; animation-delay:-12s;">☁️</div>
+  <h1>🎵 Number Notes 🎵</h1>
+  <div style="z-index:1; margin-top:4px;" id="home-mascot"></div>
+  <div class="level-cards" id="level-cards"></div>
+  <div class="home-bottom">
+    <button class="chunky pill" style="background:#AB47BC;" id="btn-book">📖 Stickers</button>
+    <div class="star-total">⭐ <span id="home-stars">0</span></div>
+    <button class="chunky icon-btn" style="background:#FF7043;" id="btn-mute-home">🔊</button>
+  </div>
+</div>
+
+<!-- ============ PLAY ============ -->
+<div class="screen" id="play">
+  <div class="top-bar">
+    <button class="chunky icon-btn" style="background:#66BB6A;" id="btn-home">🏠</button>
+    <div class="star-total">⭐ <span id="play-stars">0</span></div>
+    <button class="chunky icon-btn" style="background:#FF7043;" id="btn-mute-play">🔊</button>
+  </div>
+
+  <div class="mascot-zone">
+    <div class="bubble" id="bubble">Listen! 👂</div>
+    <div id="mascot-wrap"></div>
+  </div>
+
+  <div id="pads"></div>
+
+  <button class="chunky pill" style="background:#29B6F6; font-size:26px;" id="btn-replay">🔁 Listen again</button>
+
+  <div class="hud">
+    <div>
+      <div class="jar" id="jar"></div>
+      <div class="jar-label" id="jar-count">0</div>
+    </div>
+    <div class="hud-mid">
+      <div class="streak-row" id="streak-row">
+        <span style="font-size:30px;">🚀</span>
+        <div class="streak-slot"></div><div class="streak-slot"></div><div class="streak-slot"></div>
+      </div>
+      <div class="progress-outer">
+        <div class="progress-inner" id="progress-inner"></div>
+        <div class="progress-gift">🎁</div>
+      </div>
+      <div style="color:#fff; font-weight:bold; font-size:18px; text-shadow:0 2px 0 rgba(0,0,0,.2);" id="level-progress-label"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STICKER BOOK ============ -->
+<div class="screen" id="book" style="background:linear-gradient(180deg,#BA68C8,#F48FB1);">
+  <h2>📖 My Stickers</h2>
+  <div class="sticker-grid" id="sticker-grid"></div>
+  <button class="chunky pill" style="background:#66BB6A; margin:14px 0;" id="btn-book-home">🏠 Back</button>
+</div>
+
+<!-- ============ OVERLAYS ============ -->
+<div class="overlay" id="ov-reward">
+  <h2>🎁 NEW PRIZE! 🎁</h2>
+  <div class="reveal-emoji" id="reward-emoji">🌈</div>
+  <div class="reveal-name" id="reward-name"></div>
+  <button class="chunky pill" style="background:#FFB300; font-size:30px;" id="btn-reward-ok">YAY! 🎉</button>
+</div>
+
+<div class="overlay" id="ov-levelup">
+  <h2 id="levelup-title">⬆️ LEVEL UP! ⬆️</h2>
+  <div class="reveal-emoji" id="levelup-emoji">🏆</div>
+  <div class="reveal-name" id="levelup-name"></div>
+  <div class="overlay-btns">
+    <button class="chunky pill" style="background:#66BB6A; font-size:26px;" id="btn-next-level">Next! ▶️</button>
+    <button class="chunky pill" style="background:#29B6F6; font-size:26px;" id="btn-levelup-home">🏠</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= DATA ================= */
+const FREQ = {1:261.63, 2:293.66, 3:329.63, 4:349.23, 5:392.00, 6:440.00, 7:493.88, 8:523.25};
+const PAD_COLORS = [
+  ["#EF5350","#B71C1C"], ["#FF9800","#E65100"], ["#FDD835","#F57F17"], ["#66BB6A","#1B5E20"],
+  ["#29B6F6","#01579B"], ["#5C6BC0","#1A237E"], ["#AB47BC","#4A148C"], ["#EC407A","#880E4F"]
+];
+const LEVELS = [
+  { name:"Up and Down",   emoji:"🎵", notes:3, goal:5, signature:[1,2,3,2,1],
+    variants:[[1,2,1],[2,3,2],[1,2,3],[3,2,1],[1,3,1],[1,2,3,2,1]] },
+  { name:"Climb the Steps", emoji:"🪜", notes:5, goal:5, signature:[1,2,3,4,5],
+    variants:[[5,4,3,2,1],[1,3,5],[3,4,5],[5,3,1],[1,2,3,2,1],[2,3,4,5]] },
+  { name:"All the Way Up", emoji:"🚀", notes:8, goal:5, signature:[1,2,3,4,5,6,7,8],
+    variants:[[8,7,6,5],[1,3,5,8],[5,6,7,8],[8,5,3,1],[1,8,1],[6,7,8]] }
+];
+const REWARDS = [
+  { type:"sticker",    emoji:"🌈", name:"Rainbow Sticker" },
+  { type:"instrument", emoji:"🔔", name:"Bell Sounds!",  id:"bells" },
+  { type:"outfit",     emoji:"🎩", name:"Party Hat for Beep!", id:"hat" },
+  { type:"sticker",    emoji:"🦄", name:"Unicorn Sticker" },
+  { type:"instrument", emoji:"🎹", name:"Piano Sounds!", id:"piano" },
+  { type:"outfit",     emoji:"🕶️", name:"Cool Shades for Beep!", id:"shades" },
+  { type:"sticker",    emoji:"🐬", name:"Dolphin Sticker" },
+  { type:"instrument", emoji:"🎺", name:"Silly Kazoo!",  id:"kazoo" },
+  { type:"outfit",     emoji:"👑", name:"Crown for Beep!", id:"crown" },
+  { type:"sticker",    emoji:"🌟", name:"Superstar Sticker" },
+  { type:"sticker",    emoji:"🍩", name:"Donut Sticker" },
+  { type:"sticker",    emoji:"🦖", name:"Dino Sticker" }
+];
+const STARS_PER_REWARD = 5;
+
+/* ================= STATE ================= */
+const S = {
+  screen:"home", level:0, stars:0, streak:0,
+  wins:[0,0,0], levelDone:[false,false,false], unlocked:1,
+  rewardsEarned:0, instrument:"marimba", outfit:null,
+  phase:"idle", pattern:[], idx:0, muted:false, firstRound:true
+};
+window.NN = S; // debug handle
+
+/* ================= AUDIO ================= */
+let actx = null;
+function audio() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+document.body.addEventListener("pointerdown", () => { try { audio(); } catch(e){} }, { once:true });
+
+function tone(freq, when, dur, wave, vol, bendTo) {
+  if (S.muted) return;
+  const c = audio(), o = c.createOscillator(), g = c.createGain();
+  o.type = wave; o.frequency.setValueAtTime(freq, when);
+  if (bendTo) o.frequency.exponentialRampToValueAtTime(bendTo, when + dur);
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(vol, when + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(when); o.stop(when + dur + 0.05);
+}
+function playNote(deg) {
+  if (S.muted) return;
+  const t = audio().currentTime, f = FREQ[deg];
+  switch (S.instrument) {
+    case "bells":
+      tone(f, t, 1.0, "sine", 0.35); tone(f*2.76, t, 0.6, "sine", 0.08); tone(f*5.4, t, 0.25, "sine", 0.04); break;
+    case "piano":
+      tone(f, t, 0.6, "triangle", 0.4); tone(f*2, t, 0.4, "sine", 0.1); break;
+    case "kazoo":
+      tone(f, t, 0.4, "sawtooth", 0.12, f*1.02); tone(f*1.005, t, 0.4, "square", 0.05); break;
+    default: /* marimba */
+      tone(f, t, 0.5, "sine", 0.45); tone(f*4, t, 0.12, "sine", 0.08);
+  }
+}
+function sfx(kind) {
+  if (S.muted) return;
+  const t = audio().currentTime;
+  if (kind === "success") [523,659,784,1047].forEach((f,i)=>tone(f, t+i*0.09, 0.3, "sine", 0.3));
+  else if (kind === "oops") { tone(330, t, 0.25, "triangle", 0.18); tone(262, t+0.22, 0.35, "triangle", 0.15); }
+  else if (kind === "sparkle") [1047,1319,1568,2093].forEach((f,i)=>tone(f, t+i*0.05, 0.15, "sine", 0.15));
+  else if (kind === "fanfare") {
+    [[262,330,392],[349,440,523],[392,494,587],[523,659,784,1047]].forEach((chord,i)=>
+      chord.forEach(f=>tone(f, t+i*0.22, i===3?0.9:0.25, "triangle", 0.18)));
+  }
+  else if (kind === "pop") tone(880, t, 0.1, "sine", 0.2, 1320);
+}
+function say(text) {
+  if (S.muted || !window.speechSynthesis) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05; u.pitch = 1.5; u.volume = 0.9;
+    speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+/* ================= HELPERS ================= */
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function show(screen) {
+  S.screen = screen;
+  document.querySelectorAll(".screen").forEach(el => el.classList.toggle("active", el.id === screen));
+}
+
+/* ================= MASCOT ================= */
+function mascotSVG(size) {
+  return `<svg viewBox="0 0 120 130" width="${size}" height="${size*1.08}">
+    <g id="mascot-body">
+      <line x1="60" y1="22" x2="60" y2="8" stroke="#E65100" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="60" cy="7" r="6" fill="#FFEB3B" stroke="#F57F17" stroke-width="2"/>
+      <ellipse cx="60" cy="70" rx="42" ry="44" fill="#FF9800" stroke="#E65100" stroke-width="4"/>
+      <ellipse cx="60" cy="82" rx="26" ry="20" fill="#FFE0B2"/>
+      <circle class="m-eye" cx="45" cy="58" r="7" fill="#3E2723"/>
+      <circle class="m-eye" cx="75" cy="58" r="7" fill="#3E2723"/>
+      <circle cx="47" cy="56" r="2.5" fill="#fff"/>
+      <circle cx="77" cy="56" r="2.5" fill="#fff"/>
+      <path class="m-mouth-happy" d="M46 76 Q60 92 74 76" fill="#7B341E" stroke="#5D2E1A" stroke-width="2"/>
+      <path class="m-mouth-sad" d="M48 84 Q60 74 72 84" fill="none" stroke="#5D2E1A" stroke-width="3" stroke-linecap="round" style="display:none"/>
+      <circle cx="33" cy="72" r="6" fill="#FFAB91" opacity=".8"/>
+      <circle cx="87" cy="72" r="6" fill="#FFAB91" opacity=".8"/>
+      <ellipse cx="42" cy="116" rx="11" ry="7" fill="#E65100"/>
+      <ellipse cx="78" cy="116" rx="11" ry="7" fill="#E65100"/>
+      <g class="m-hat"><polygon points="60,-14 42,26 78,26" fill="#EC407A" stroke="#880E4F" stroke-width="2"/><circle cx="60" cy="-14" r="6" fill="#FFEB3B"/></g>
+      <g class="m-shades"><rect x="33" y="50" width="24" height="14" rx="6" fill="#263238"/><rect x="63" y="50" width="24" height="14" rx="6" fill="#263238"/><line x1="57" y1="56" x2="63" y2="56" stroke="#263238" stroke-width="4"/></g>
+      <g class="m-crown"><polygon points="38,26 44,6 54,20 60,2 66,20 76,6 82,26" fill="#FFD600" stroke="#F57F17" stroke-width="2"/><circle cx="60" cy="14" r="3" fill="#EF5350"/></g>
+    </g>
+  </svg>`;
+}
+function renderMascots() {
+  $("mascot-wrap").innerHTML = mascotSVG(120);
+  $("home-mascot").innerHTML = mascotSVG(90);
+  [$("mascot-wrap"), $("home-mascot")].forEach(el => {
+    el.className = el.className.replace(/outfit-\w+/g,"").trim();
+    if (S.outfit) el.classList.add("outfit-" + S.outfit);
+    el.classList.add("mood-happy");
+  });
+}
+function mood(m, ms) {
+  const el = $("mascot-wrap");
+  el.classList.remove("mood-happy","mood-cheer","mood-dance","mood-sad");
+  el.classList.add("mood-" + m);
+  const happy = el.querySelector(".m-mouth-happy"), sad = el.querySelector(".m-mouth-sad");
+  if (happy && sad) { happy.style.display = m==="sad" ? "none" : ""; sad.style.display = m==="sad" ? "" : "none"; }
+  if (ms) setTimeout(() => { if (S.screen==="play") mood("happy"); }, ms);
+}
+function bubble(text, speak) {
+  const b = $("bubble");
+  b.textContent = text;
+  b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+  if (speak) say(speak);
+}
+
+/* ================= FX ================= */
+const CONF_COLORS = ["#EF5350","#FF9800","#FDD835","#66BB6A","#29B6F6","#AB47BC","#EC407A","#fff"];
+function confetti(n) {
+  const fx = $("fx");
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement("div");
+    d.className = "conf";
+    d.style.left = Math.random()*100 + "vw";
+    d.style.background = CONF_COLORS[i % CONF_COLORS.length];
+    d.style.borderRadius = Math.random() > .5 ? "50%" : "3px";
+    d.style.animationDuration = (1.4 + Math.random()*1.6) + "s";
+    d.style.animationDelay = (Math.random()*0.4) + "s";
+    d.style.width = d.style.height = (8 + Math.random()*12) + "px";
+    fx.appendChild(d);
+    setTimeout(() => d.remove(), 3600);
+  }
+}
+function callout(text) {
+  const c = document.createElement("div");
+  c.className = "callout"; c.textContent = text;
+  document.body.appendChild(c);
+  setTimeout(() => c.remove(), 1500);
+}
+function flyStarToJar() {
+  const jar = $("jar").getBoundingClientRect();
+  const st = document.createElement("div");
+  st.className = "fly-star"; st.textContent = "⭐";
+  const sx = window.innerWidth/2, sy = window.innerHeight*0.35;
+  st.style.left = sx + "px"; st.style.top = sy + "px";
+  document.body.appendChild(st);
+  st.animate([
+    { transform:"translate(0,0) scale(2)", opacity:1 },
+    { transform:`translate(${jar.left + jar.width/2 - sx}px, ${jar.top + jar.height/2 - sy}px) scale(.5)`, opacity:1 }
+  ], { duration:700, easing:"cubic-bezier(.5,-.3,.6,1)" }).onfinish = () => { st.remove(); renderHUD(); };
+}
+
+/* ================= RENDER ================= */
+function renderHome() {
+  $("home-stars").textContent = S.stars;
+  const wrap = $("level-cards");
+  wrap.innerHTML = "";
+  LEVELS.forEach((lv, i) => {
+    const locked = i >= S.unlocked;
+    const card = document.createElement("button");
+    card.className = "level-card" + (locked ? " locked" : "");
+    card.style.background = ["#FF7043","#66BB6A","#AB47BC"][i];
+    const dots = "🟡".repeat(Math.min(S.wins[i], lv.goal)) + "⚪".repeat(Math.max(0, lv.goal - S.wins[i]));
+    card.innerHTML = `<span class="big-emoji">${locked ? "🔒" : lv.emoji}</span>
+      <span><span class="lv-name">${i+1}. ${lv.name}</span><br><span class="lv-dots">${S.levelDone[i] ? "🏆 " + dots : dots}</span></span>`;
+    card.onclick = () => {
+      if (locked) {
+        sfx("oops");
+        card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+      } else startLevel(i);
+    };
+    wrap.appendChild(card);
+  });
+}
+function renderPads() {
+  const wrap = $("pads");
+  wrap.innerHTML = "";
+  for (let d = 1; d <= LEVELS[S.level].notes; d++) {
+    const b = document.createElement("button");
+    b.className = "pad"; b.id = "pad-" + d; b.textContent = d;
+    b.style.setProperty("--col", PAD_COLORS[d-1][0]);
+    b.style.setProperty("--dark", PAD_COLORS[d-1][1]);
+    b.onclick = () => tapPad(d);
+    wrap.appendChild(b);
+  }
+}
+function renderHUD() {
+  $("play-stars").textContent = S.stars;
+  $("home-stars").textContent = S.stars;
+  const jar = $("jar"), inJar = S.stars % STARS_PER_REWARD;
+  jar.innerHTML = "";
+  for (let i = 0; i < Math.min(inJar, 12); i++) {
+    const s = document.createElement("span"); s.className = "js"; s.textContent = "⭐"; jar.appendChild(s);
+  }
+  $("jar-count").textContent = S.stars;
+  $("progress-inner").style.width = (inJar / STARS_PER_REWARD * 100) + "%";
+  document.querySelectorAll("#streak-row .streak-slot").forEach((el, i) => {
+    el.classList.toggle("on", i < (S.streak % 3 === 0 && S.streak > 0 ? 3 : S.streak % 3));
+    el.textContent = el.classList.contains("on") ? "⭐" : "";
+  });
+  const lv = LEVELS[S.level];
+  $("level-progress-label").textContent = S.levelDone[S.level]
+    ? "🏆 " + lv.emoji : lv.emoji + " " + "🟡".repeat(Math.min(S.wins[S.level], lv.goal)) + "⚪".repeat(Math.max(0, lv.goal - S.wins[S.level]));
+}
+function renderBook() {
+  const grid = $("sticker-grid");
+  grid.innerHTML = "";
+  REWARDS.forEach((r, i) => {
+    const cell = document.createElement("button");
+    const earned = i < S.rewardsEarned;
+    cell.className = "sticker-cell" + (earned ? "" : " mystery");
+    if (earned && r.type === "instrument" && S.instrument === r.id) cell.classList.add("chosen");
+    if (earned && r.type === "outfit" && S.outfit === r.id) cell.classList.add("chosen");
+    cell.innerHTML = earned ? `${r.emoji}<span class="s-name">${r.name}</span>` : "❓";
+    cell.onclick = () => {
+      if (!earned) { sfx("pop"); return; }
+      if (r.type === "instrument") { S.instrument = r.id; playNote(1); setTimeout(()=>playNote(3),200); setTimeout(()=>playNote(5),400); }
+      else if (r.type === "outfit") { S.outfit = S.outfit === r.id ? null : r.id; renderMascots(); sfx("sparkle"); }
+      else sfx("sparkle");
+      renderBook();
+    };
+    grid.appendChild(cell);
+  });
+}
+
+/* ================= GAME FLOW ================= */
+function pickPattern() {
+  const lv = LEVELS[S.level];
+  if (S.firstRound) return lv.signature.slice();
+  return lv.variants[Math.floor(Math.random() * lv.variants.length)].slice();
+}
+function setPadsEnabled(on) {
+  document.querySelectorAll(".pad").forEach(p => p.classList.toggle("disabled", !on));
+}
+async function playPattern() {
+  S.phase = "demo";
+  setPadsEnabled(false);
+  bubble("Listen! 👂", "Listen!");
+  mood("happy");
+  await sleep(900);
+  for (const deg of S.pattern) {
+    if (S.screen !== "play") return;
+    const pad = $("pad-" + deg);
+    playNote(deg);
+    if (pad) { pad.classList.add("lit"); setTimeout(() => pad.classList.remove("lit"), 450); }
+    await sleep(620);
+  }
+  if (S.screen !== "play") return;
+  await sleep(250);
+  bubble("Your turn! 👇", "Your turn!");
+  S.idx = 0;
+  S.phase = "input";
+  setPadsEnabled(true);
+}
+async function newRound() {
+  S.pattern = pickPattern();
+  S.firstRound = false;
+  await playPattern();
+}
+function startLevel(i) {
+  S.level = i;
+  S.firstRound = true;
+  show("play");
+  renderPads();
+  renderMascots();
+  renderHUD();
+  newRound();
+}
+async function tapPad(deg) {
+  if (S.phase !== "input") return;
+  const pad = $("pad-" + deg);
+  playNote(deg);
+  pad.classList.add("lit"); setTimeout(() => pad.classList.remove("lit"), 300);
+  if (deg === S.pattern[S.idx]) {
+    S.idx++;
+    if (S.idx >= S.pattern.length) await winRound();
+  } else {
+    await missRound(pad);
+  }
+}
+async function missRound(pad) {
+  S.phase = "waiting";
+  setPadsEnabled(false);
+  S.streak = 0;
+  renderHUD();
+  sfx("oops");
+  pad.classList.add("wrong"); setTimeout(() => pad.classList.remove("wrong"), 550);
+  bubble("Oops! Try again 💛", "Oops! Let's try again!");
+  mood("sad", 1200);
+  await sleep(1400);
+  if (S.screen === "play") await playPattern();
+}
+async function winRound() {
+  S.phase = "celebrating";
+  setPadsEnabled(false);
+  sfx("success");
+  confetti(45);
+  mood("cheer", 2200);
+  const cheers = [["WOW! 🎉","Wow! You did it!"],["AMAZING! ⭐","Amazing!"],["YOU DID IT! 🥳","You did it!"],["SUPER! 💪","Super job!"],["HOORAY! 🎊","Hooray!"]];
+  const ch = cheers[Math.floor(Math.random()*cheers.length)];
+  bubble(ch[0], ch[1]);
+  await awardStar();
+  S.streak++;
+  S.wins[S.level]++;
+  renderHUD();
+  // streak bonus every 3 in a row
+  if (S.streak > 0 && S.streak % 3 === 0) {
+    await sleep(500);
+    callout("STREAK! 🚀");
+    sfx("fanfare");
+    confetti(90);
+    mood("dance", 2400);
+    await awardStar();  // bonus star
+    renderHUD();
+    await sleep(800);
+  }
+  await sleep(900);
+  // reward unlocks (may be more than one if bonus star crossed a line)
+  while (S.rewardsEarned < REWARDS.length && S.stars >= (S.rewardsEarned + 1) * STARS_PER_REWARD) {
+    await showReward(REWARDS[S.rewardsEarned]);
+  }
+  // level complete?
+  const lv = LEVELS[S.level];
+  if (!S.levelDone[S.level] && S.wins[S.level] >= lv.goal) {
+    S.levelDone[S.level] = true;
+    if (S.level + 1 > S.unlocked - 1 && S.unlocked < LEVELS.length) S.unlocked = S.level + 2 > LEVELS.length ? LEVELS.length : S.level + 2;
+    showLevelUp();
+    return;
+  }
+  if (S.screen === "play") await newRound();
+}
+function awardStar() {
+  return new Promise(res => {
+    S.stars++;
+    sfx("sparkle");
+    flyStarToJar();
+    setTimeout(res, 750);
+  });
+}
+function showReward(r) {
+  return new Promise(res => {
+    sfx("fanfare");
+    confetti(80);
+    S.rewardsEarned++;
+    if (r.type === "instrument") S.instrument = r.id;
+    if (r.type === "outfit") { S.outfit = r.id; renderMascots(); }
+    $("reward-emoji").textContent = r.emoji;
+    $("reward-name").textContent = r.name;
+    say("New prize!");
+    $("ov-reward").classList.add("active");
+    $("btn-reward-ok").onclick = () => {
+      sfx("pop");
+      $("ov-reward").classList.remove("active");
+      renderHUD();
+      res();
+    };
+  });
+}
+function showLevelUp() {
+  sfx("fanfare");
+  confetti(120);
+  const last = S.level === LEVELS.length - 1;
+  $("levelup-title").textContent = last ? "🌟 YOU DID IT ALL! 🌟" : "⬆️ LEVEL UP! ⬆️";
+  $("levelup-emoji").textContent = last ? "🏆" : LEVELS[S.level + 1].emoji;
+  $("levelup-name").textContent = last ? "You climbed ALL the way up!" : "You opened: " + LEVELS[S.level + 1].name + "!";
+  say(last ? "You did it all! Incredible!" : "Level up! Amazing!");
+  $("btn-next-level").style.display = last ? "none" : "";
+  $("ov-levelup").classList.add("active");
+  $("btn-next-level").onclick = () => {
+    $("ov-levelup").classList.remove("active");
+    startLevel(S.level + 1);
+  };
+  $("btn-levelup-home").onclick = () => {
+    $("ov-levelup").classList.remove("active");
+    goHome();
+  };
+}
+function goHome() {
+  S.phase = "idle";
+  show("home");
+  renderHome();
+  renderMascots();
+}
+
+/* ================= WIRING ================= */
+function toggleMute() {
+  S.muted = !S.muted;
+  if (S.muted && window.speechSynthesis) { try { speechSynthesis.cancel(); } catch(e){} }
+  ["btn-mute-home","btn-mute-play"].forEach(id => $(id).textContent = S.muted ? "🔇" : "🔊");
+  if (!S.muted) sfx("pop");
+}
+$("btn-mute-home").onclick = toggleMute;
+$("btn-mute-play").onclick = toggleMute;
+$("btn-home").onclick = () => { sfx("pop"); goHome(); };
+$("btn-replay").onclick = () => { if (S.phase === "input" || S.phase === "idle") { sfx("pop"); playPattern(); } };
+$("btn-book").onclick = () => { sfx("pop"); show("book"); renderBook(); };
+$("btn-book-home").onclick = () => { sfx("pop"); goHome(); };
+
+renderMascots();
+renderHome();
+</script>
+</body>
+</html>
