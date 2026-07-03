@@ -345,12 +345,32 @@ function sfx(kind) {
   }
   else if (kind === "pop") tone(880, t, 0.1, "sine", 0.2, 1320);
 }
+let blipVoice = null;
+function pickVoice() {
+  try {
+    const vs = (speechSynthesis.getVoices() || []).filter(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+    if (!vs.length) return;
+    // natural voices first (pitched up they sound like a happy cartoon), then character voices
+    const prefer = ["samantha", "google us english", "flo (english (united states))", "flo", "shelley", "karen", "aria", "zira", "victoria"];
+    blipVoice = null;
+    for (const p of prefer) {
+      const v = vs.find(v => v.name.toLowerCase().includes(p));
+      if (v) { blipVoice = v; break; }
+    }
+    if (!blipVoice) blipVoice = vs[0];
+  } catch(e){}
+}
+if (window.speechSynthesis) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
 function say(text) {
   if (S.muted || !window.speechSynthesis) return;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.05; u.pitch = 1.5; u.volume = 0.9;
+    if (blipVoice) u.voice = blipVoice;
+    u.rate = 1.1; u.pitch = 2; u.volume = 0.9;
     speechSynthesis.speak(u);
   } catch(e){}
 }
