@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Number Notes</title>
+<title>Blip Tunes</title>
+<meta name="description" content="Blip Tunes — Interval Trainer for Kids. Listen to the notes, then tap them back!">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
   html,body { height:100%; overflow:hidden; }
@@ -83,6 +84,17 @@
   @keyframes mCheer { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-26px) rotate(6deg)} }
   @keyframes mDance { 0%,100%{transform:rotate(-10deg)} 50%{transform:rotate(10deg) translateY(-8px)} }
   @keyframes mSad { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px) scale(1.03,.95)} }
+
+  /* ---------- Blip alive ---------- */
+  .m-eye { animation: blink 4.2s infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes blink { 0%,93%,100%{transform:scaleY(1)} 96%{transform:scaleY(.12)} }
+  .glow .m-bulb { fill:#fff; filter:drop-shadow(0 0 6px #FFEE58) drop-shadow(0 0 14px #FFD600); }
+  .bop #mascot-body { animation:mBop .35s ease !important; }
+  @keyframes mBop { 0%,100%{transform:scale(1)} 40%{transform:scale(1.1,.9) translateY(4px)} }
+  #mascot-wrap, #home-mascot { cursor:pointer; }
+  .tagline { z-index:1; color:#fff; font-size:17px; font-weight:bold; background:rgba(0,0,0,.15); padding:4px 14px; border-radius:12px; margin-top:2px; }
+  .mini-bubble { z-index:1; background:#fff; color:#5E35B1; font-size:16px; font-weight:bold; padding:5px 14px; border-radius:14px; margin-top:8px; box-shadow:0 3px 0 rgba(0,0,0,.12); }
+  .mini-bubble.pop { animation:bubblePop .35s; }
 
   /* ---------- number pads ---------- */
   #pads { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; max-width:440px; z-index:1; padding:6px; }
@@ -166,8 +178,10 @@
 <div class="screen active" id="home">
   <div class="cloud" style="top:6%; animation-duration:38s;">☁️</div>
   <div class="cloud" style="top:22%; animation-duration:26s; animation-delay:-12s;">☁️</div>
-  <h1>🎵 Number Notes 🎵</h1>
-  <div style="z-index:1; margin-top:4px;" id="home-mascot"></div>
+  <h1>🎵 Blip Tunes 🎵</h1>
+  <div class="tagline">Interval Trainer for Kids</div>
+  <div class="mini-bubble" id="blip-hello">Hi! I'm Blip! 👋</div>
+  <div style="z-index:1; margin-top:2px;" id="home-mascot"></div>
   <div class="level-cards" id="level-cards"></div>
   <div class="home-bottom">
     <button class="chunky pill" style="background:#AB47BC;" id="btn-book">📖 Stickers</button>
@@ -261,14 +275,14 @@ const LEVELS = [
 ];
 const REWARDS = [
   { type:"sticker",    emoji:"🌈", name:"Rainbow Sticker" },
-  { type:"instrument", emoji:"🔔", name:"Bell Sounds!",  id:"bells" },
-  { type:"outfit",     emoji:"🎩", name:"Party Hat for Beep!", id:"hat" },
+  { type:"instrument", emoji:"🤖", name:"Blip Tunes!",  id:"blip" },
+  { type:"outfit",     emoji:"🎩", name:"Party Hat for Blip!", id:"hat" },
   { type:"sticker",    emoji:"🦄", name:"Unicorn Sticker" },
   { type:"instrument", emoji:"🎹", name:"Piano Sounds!", id:"piano" },
-  { type:"outfit",     emoji:"🕶️", name:"Cool Shades for Beep!", id:"shades" },
+  { type:"outfit",     emoji:"🕶️", name:"Cool Shades for Blip!", id:"shades" },
   { type:"sticker",    emoji:"🐬", name:"Dolphin Sticker" },
   { type:"instrument", emoji:"🎺", name:"Silly Kazoo!",  id:"kazoo" },
-  { type:"outfit",     emoji:"👑", name:"Crown for Beep!", id:"crown" },
+  { type:"outfit",     emoji:"👑", name:"Crown for Blip!", id:"crown" },
   { type:"sticker",    emoji:"🌟", name:"Superstar Sticker" },
   { type:"sticker",    emoji:"🍩", name:"Donut Sticker" },
   { type:"sticker",    emoji:"🦖", name:"Dino Sticker" }
@@ -305,11 +319,12 @@ function tone(freq, when, dur, wave, vol, bendTo) {
   o.start(when); o.stop(when + dur + 0.05);
 }
 function playNote(deg) {
+  flashBulb();
   if (S.muted) return;
   const t = audio().currentTime, f = FREQ[deg];
   switch (S.instrument) {
-    case "bells":
-      tone(f, t, 1.0, "sine", 0.35); tone(f*2.76, t, 0.6, "sine", 0.08); tone(f*5.4, t, 0.25, "sine", 0.04); break;
+    case "blip":
+      tone(f, t, 0.22, "square", 0.16, f*1.6); tone(f*2, t+0.08, 0.14, "square", 0.07, f*2.4); break;
     case "piano":
       tone(f, t, 0.6, "triangle", 0.4); tone(f*2, t, 0.4, "sine", 0.1); break;
     case "kazoo":
@@ -353,7 +368,7 @@ function mascotSVG(size) {
   return `<svg viewBox="0 0 120 130" width="${size}" height="${size*1.08}">
     <g id="mascot-body">
       <line x1="60" y1="22" x2="60" y2="8" stroke="#E65100" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="60" cy="7" r="6" fill="#FFEB3B" stroke="#F57F17" stroke-width="2"/>
+      <circle class="m-bulb" cx="60" cy="7" r="6" fill="#FFEB3B" stroke="#F57F17" stroke-width="2"/>
       <ellipse cx="60" cy="70" rx="42" ry="44" fill="#FF9800" stroke="#E65100" stroke-width="4"/>
       <ellipse cx="60" cy="82" rx="26" ry="20" fill="#FFE0B2"/>
       <circle class="m-eye" cx="45" cy="58" r="7" fill="#3E2723"/>
@@ -430,6 +445,39 @@ function flyStarToJar() {
     { transform:"translate(0,0) scale(2)", opacity:1 },
     { transform:`translate(${jar.left + jar.width/2 - sx}px, ${jar.top + jar.height/2 - sy}px) scale(.5)`, opacity:1 }
   ], { duration:700, easing:"cubic-bezier(.5,-.3,.6,1)" }).onfinish = () => { st.remove(); renderHUD(); };
+}
+
+function flashBulb() {
+  const els = [$("mascot-wrap"), $("home-mascot")];
+  els.forEach(el => el && el.classList.add("glow"));
+  clearTimeout(flashBulb._t);
+  flashBulb._t = setTimeout(() => els.forEach(el => el && el.classList.remove("glow")), 260);
+}
+function bopBlip() {
+  const el = $("mascot-wrap");
+  el.classList.remove("bop"); void el.offsetWidth; el.classList.add("bop");
+}
+function pokeBlip() {
+  if (S.phase === "demo" || S.phase === "celebrating") return;
+  if (!S.muted) {
+    const t = audio().currentTime;
+    [660, 880, 1320].forEach((f,i) => tone(f, t + i*0.07, 0.12, "square", 0.15, f*1.4));
+  }
+  const el = S.screen === "home" ? $("home-mascot") : $("mascot-wrap");
+  el.classList.remove("mood-dance"); void el.offsetWidth; el.classList.add("mood-dance");
+  setTimeout(() => el.classList.remove("mood-dance"), 1300);
+  const lines = [["Blip blip! 🤖","Blip blip!"],["Hee hee! 😄","Hee hee! That tickles!"],["Boop! 🎵","Boop!"],["I'm Blip! 👋","I'm Blip!"],["Let's play! 🎶","Let's play!"]];
+  const l = lines[Math.floor(Math.random()*lines.length)];
+  if (S.screen === "play") {
+    bubble(l[0], l[1]);
+    setTimeout(() => { if (S.phase === "input" && S.screen === "play") bubble("Your turn! 👇"); }, 1800);
+  } else {
+    const h = $("blip-hello");
+    h.textContent = l[0];
+    h.classList.remove("pop"); void h.offsetWidth; h.classList.add("pop");
+    say(l[1]);
+  }
+  confetti(8);
 }
 
 function floatNote() {
@@ -536,6 +584,7 @@ async function playPattern() {
   for (const deg of S.pattern) {
     if (S.screen !== "play") return;
     playNote(deg);
+    bopBlip();
     if (ear) {
       floatNote();
     } else {
@@ -694,6 +743,16 @@ $("btn-home").onclick = () => { sfx("pop"); goHome(); };
 $("btn-replay").onclick = () => { if (S.phase === "input" || S.phase === "idle") { sfx("pop"); playPattern(); } };
 $("btn-book").onclick = () => { sfx("pop"); show("book"); renderBook(); };
 $("btn-book-home").onclick = () => { sfx("pop"); goHome(); };
+
+$("mascot-wrap").onclick = pokeBlip;
+$("home-mascot").onclick = pokeBlip;
+setInterval(() => {
+  if (S.screen === "home") {
+    const el = $("home-mascot");
+    el.classList.add("mood-dance");
+    setTimeout(() => el.classList.remove("mood-dance"), 1300);
+  }
+}, 9000);
 
 renderMascots();
 renderHome();
